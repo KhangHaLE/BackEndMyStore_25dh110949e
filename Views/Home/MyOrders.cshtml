@@ -1,0 +1,146 @@
+﻿@model BackEndMyStore_25dh110949.Models.ViewModel.MyOrder
+@{
+    ViewBag.Title = "Đơn hàng của tôi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <h3>ĐƠN HÀNG CỦA TÔI</h3>
+
+    <!-- PHẦN 1: TÌM KIẾM ĐƠN HÀNG -->
+    @using (Html.BeginForm("MyOrder", "Order", FormMethod.Get, new { @class = "form-inline my-3" }))
+    {
+        <div class="input-group w-50">
+            <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control" placeholder="Tìm theo Mã đơn hàng hoặc Tên sản phẩm..." />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+            </div>
+        </div>
+    }
+
+    <!-- KIỂM TRA NẾU CHƯA CÓ ĐƠN HÀNG NÀO -->
+    @if (Model.AllOrders == null || !Model.AllOrders.Any())
+    {
+        <div class="alert alert-warning text-center p-4">
+            <p class="mb-2 font-weight-bold">BẠN CHƯA CÓ ĐƠN HÀNG NÀO, HÃY ĐẶT ĐƠN NGAY.</p>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-success">Về trang chủ</a>
+        </div>
+    }
+    else
+    {
+        <!-- PHẦN 2: CÁC TAB TRẠNG THÁI ĐƠN HÀNG (Sử dụng Bootstrap Tabs) -->
+        <ul class="nav nav-tabs" id="orderTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#all">Tất cả đơn (@Model.AllOrders.Count)</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#pending">Chờ thanh toán (@Model.PendingPaymentOrders.Count)</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#processing">Đang xử lý (@Model.ProcessingOrders.Count)</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#shipping">Đang vận chuyển (@Model.ShippingOrders.Count)</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#delivered">Đã giao (@Model.DeliveredOrders.Count)</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#cancelled">Đã hủy (@Model.CancelledOrders.Count)</a>
+            </li>
+        </ul>
+
+        <!-- NỘI DUNG TỪNG TAB -->
+        <div class="tab-content mt-3">
+            <div class="tab-pane fade show active" id="all">
+                @RenderOrderList(Model.AllOrders, "all")
+            </div>
+            <div class="tab-pane fade" id="pending">
+                @RenderOrderList(Model.PendingPaymentOrders, "pending")
+            </div>
+            <div class="tab-pane fade" id="processing">
+                @RenderOrderList(Model.ProcessingOrders, "processing")
+            </div>
+            <div class="tab-pane fade" id="shipping">
+                @RenderOrderList(Model.ShippingOrders, "shipping")
+            </div>
+            <div class="tab-pane fade" id="delivered">
+                @RenderOrderList(Model.DeliveredOrders, "delivered")
+            </div>
+            <div class="tab-pane fade" id="cancelled">
+                @RenderOrderList(Model.CancelledOrders, "cancelled")
+            </div>
+        </div>
+    }
+</div>
+
+<!-- HELPER HIỂN THỊ DANH SÁCH ĐƠN HÀNG VÀ XỬ LÝ NÚT "XEM THÊM" -->
+@helper RenderOrderList(List<BackEndMyStore_25dh110949.Models.Order> orders, string tabKey)
+{
+    if (!orders.Any())
+    {
+        <p class="text-muted mt-3">Không có đơn hàng nào ở trạng thái này.</p>
+    }
+    else
+    {
+        for (int i = 0; i < orders.Count; i++)
+        {
+            var order = orders[i];
+            // Ẩn các đơn từ vị trí thứ 3 trở đi (index >= 2)
+            string hiddenClass = i >= 2 ? $"d-none extra-order-{tabKey}" : "";
+
+            <div class="card mb-3 @hiddenClass">
+                <div class="card-header d-flex justify-content-between">
+                    <span><strong>Mã đơn: #@order.OrderID</strong> | Ngày đặt: @order.OrderDate.ToString("dd/MM/yyyy")</span>
+                    <span class="badge badge-info">@order.OrderDetails</span>
+                </div>
+                <div class="card-body">
+                    @foreach (var item in order.OrderDetails)
+                    {
+                        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                            <div>
+                                <h6>@item.Product.ProductName</h6>
+                                <small>Số lượng: @item.Quantity | Đơn giá: @String.Format("{0:N0} đ", item.UnitPrice)</small>
+                            </div>
+                            <div>
+                                <!-- Nút XEM CHI TIẾT: điều hướng về trang Xem chi tiết sản phẩm -->
+                                <a href="@Url.Action("ProductDetail", "Home", new { id = item.ProductID })" class="btn btn-outline-secondary btn-sm">
+                                    XEM CHI TIẾT
+                                </a>
+                                <!-- Nút MUA LẠI: thêm vào giỏ hàng với số lượng = 1 -->
+                                <a href="@Url.Action("BuyAgain", "Order", new { productId = item.ProductID })" class="btn btn-primary btn-sm">
+                                    MUA LẠI
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    <div class="text-right mt-2">
+                        <strong>Tổng tiền: @String.Format("{0:N0} đ", order.TotalAmount)</strong>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Nút XEM THÊM nếu có nhiều hơn 2 đơn hàng -->
+        if (orders.Count > 2)
+        {
+            <div class="text-center mb-4">
+                <button type="button" class="btn btn-link" onclick="showMoreOrders('@tabKey', this)">
+                    Xem thêm (@(orders.Count - 2) đơn hàng khác)
+                </button>
+            </div>
+        }
+    }
+}
+
+@section Scripts {
+    <script>function showMoreOrders(tabKey, btn) {
+            // Hiển thị toàn bộ các đơn còn lại (tối đa 50 đơn đã lấy từ Controller)
+            var hiddenItems = document.querySelectorAll('.extra-order-' + tabKey);
+            hiddenItems.forEach(function (item) {
+                item.classList.remove('d-none');
+            });
+            // Ẩn nút Xem thêm sau khi bấm
+            btn.style.display = 'none';
+        }</script>
+}
